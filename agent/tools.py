@@ -44,11 +44,21 @@ def log_interaction_tool(user_message, llm):
         if not data.get('hcp_name') or data.get('hcp_name').strip() == '':
             data['hcp_name'] = 'Unknown'
         
-        # HCP find/create
-        hcp, created = HCP.objects.get_or_create(
-            name=data.get('hcp_name', 'Unknown'),
-            defaults={'specialty': 'General'}
-        )
+        # ✅ FIX: Duplicate HCP handle karein
+        hcp_name = data.get('hcp_name', 'Unknown')
+        try:
+            # Pehle exact match dhundho
+            hcp = HCP.objects.get(name=hcp_name)
+        except HCP.DoesNotExist:
+            # Agar nahi mila toh naya create karo
+            hcp = HCP.objects.create(
+                name=hcp_name,
+                specialty='General'
+            )
+        except HCP.MultipleObjectsReturned:
+            # Agar multiple hain toh pehle wala lo
+            hcp = HCP.objects.filter(name=hcp_name).first()
+            print(f"⚠️ Multiple HCP found, using first: ID {hcp.id}")
         
         # Interaction save
         interaction = Interaction.objects.create(
